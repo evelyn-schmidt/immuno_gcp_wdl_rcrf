@@ -468,3 +468,72 @@ gcloud compute instances delete $GCS_INSTANCE_NAME
 You can empty the cloud bucket either in the Web Console or using commands like `gsutil rm -r $GCS_BUCKET_PATH/folder-name`.
 
 Finally, you should perform a survey of Cloud Storage and Compute Engine sections in the Google Cloud Web Console to make sure everything has been cleaned up successfully.
+
+
+
+## Creating Case Final Report
+
+### Download Files Needed for Final Report File Generation
+```
+export WORKING_BASE=/Users/evelynschmidt/jlf/JLF-100-047
+export PATIENT_ID=JLF-100-047
+export GCS_CASE_NAME=jlf-100-047-bg004733
+export EXCEL_ITB_REVIEW_FILE=/Users/evelynschmidt/jlf/JLF-100-047/itb-review-folder/JLF-100-047_Annotated.Neoantigen_Candidates.xlsx
+
+
+# Files needed for FDA/QC metris
+aws s3 cp s3://rcrf-h37-data/JLF/${PATIENT_ID}/${GCS_CASE_NAME}/gcp_immuno_workflow/${GCS_CASE_NAME}_immuno_cloud-WDL.yaml .
+
+aws s3 cp s3://rcrf-h37-data/JLF/${PATIENT_ID}/${GCS_CASE_NAME}/gcp_immuno_workflow/variants.final.annotated.tsv .
+
+mkdir qc
+cd qc
+aws s3 cp --recursive s3://rcrf-h37-data/JLF/${PATIENT_ID}/${GCS_CASE_NAME}/gcp_immuno_workflow/qc/ . 
+cd $WORKING_BASE
+
+# Files needed for Peptide Order Sheet Coloring
+mkdir pVACseq
+cd pVACSeq
+aws s3 cp --recursive s3://rcrf-h37-data/JLF/${PATIENT_ID}/${GCS_CASE_NAME}/gcp_immuno_workflow/pVACseq/ . 
+cd $WORKING_BASE
+
+# You will have to have the itb reviewed canidates and the generate protein fasta, which is typically located in google drive
+
+```
+
+### Before Immunogenomics Tumor Board Review
+
+A written case final report will be created which includes a Genomics Review Report document. This document includes a section of a basic data QC review and a table summarizing values that pass/fail the FDA quality thresholds.
+
+### Basic data QC
+
+Pull the basic data qc from various files. This script will output a file final_results/qc_file.txt and also print the summary to to screen.
+
+```
+cd $WORKING_BASE
+docker run -it --env HOME --env WORKING_BASE  -v $HOME/:$HOME/ -v /shared/:/shared/ evelyns2000/neoang_scripts:latest /bin/bash
+
+python3 /opt/scripts/get_neoantigen_qc.py -WB $WORKING_BASE -f final_results --yaml ${WORKING_BASE}/yamls/$CLOUD_YAML
+```
+
+### FDA Quality Thresholds
+
+This script will output a file final_results/fda_quality_thresholds_report.tsv and also print the summary to to screen. The assumed name of the final results folder is final_results, if the folder name is different simply provide the correct name to the -f argument. 
+
+```
+python3 /opt/scripts/get_FDA_thresholds.py -WB  $WORKING_BASE -f final_results
+exit
+```
+
+### After Immunogenomics Tumor Board Review
+
+To generate files needed for manual review, save the pVAC results from the Immunogenomics Tumor Board Review meeting as $SAMPLE.revd.Annotated.Neoantigen_Candidates.xlsx (Note: if the file is not saved under this exact name the below command will need to be modified).
+
+```
+cd $WORKING_BASE
+
+docker run -it --env HOME --env WORKING_BASE  --env PATIENT_ID --env EXCEL_ITB_REVIEW_FILE --env GCS_CASE_NAME -v $HOME/:$HOME/ -v /shared/:/shared/ evelyns2000/neoang_scripts:latest /bin/bash
+
+python3 /opt/scripts/setup_review.py -a ${ITB_REVIEW_FILE} -c ../generate_protein_fasta/candidates/${PATIENT}_ID.annotated_filtered.vcf-pass-51mer.fa.manufacturability.tsv -samp ${PATIENT_ID}  -classI ${WORKING_BASE}/final_results/pVACseq/mhc_i/${GCS_CASE_NAME}-tumor-exome.all_epitopes.aggregated.tsv -classII ${WORKING_BASE}/final_results/pVACseq/mhc_ii/${GCS_CASE_NAME}-tumor-exome.all_epitopes.aggregated.tsv -o colored_peptides51mer.html
+```
+Open colored_peptides51mer.html and copy the table into an excel spreadsheet. The formatting should remain. Utilizing the Annotated.Neoantigen_Candidates and colored Peptides_51-mer for manual review.
