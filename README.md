@@ -174,6 +174,7 @@ export GCS_SERVICE_ACCOUNT=cromwell-server@$GCS_PROJECT.iam.gserviceaccount.com
 export GCS_BUCKET_NAME=jlf-rcrf-immuno-outputs
 export GCS_BUCKET_PATH=gs://$GCS_BUCKET_NAME
 export GCS_CASE_NAME=jlf-100-044
+export WORKING_BASE=$HOME/gcp_immuno/
 
 source /shared/helpers.sh
 
@@ -184,6 +185,8 @@ Create a directory for YAML files and create one for the desired pipeline that p
 
 ```bash
 gcloud compute ssh $GCS_INSTANCE_NAME
+
+mkdir $WORKING_BASE 
 mkdir git
 mkdir yamls
 cd ~/git
@@ -295,21 +298,20 @@ On the Google VM, jump into a docker container with the script available
 gsutil ls $GCS_BUCKET_PATH/workflow_artifacts/
 journalctl -u cromwell | tail | grep "Workflow actor"
 export WORKFLOW_ID=<id from above>
-export WORKING_BASE=$HOME/final_results
-cd $HOME
-mkdir $WORKING_BASE
-cd $WORKING_BASE
 
 docker run -it --env WORKFLOW_ID --env GCS_BUCKET_PATH --env WORKING_BASE -v $WORKING_BASE/:$WORKING_BASE/ -v $HOME/.config/gcloud:/root/.config/gcloud mgibio/cloudize-workflow:latest /bin/bash
+
+cd $WORKING_BASE
+mkdir final_results
+cd final_results
 
 ```
 
 Execute the script:
 
 ```bash
-python3 /opt/scripts/pull_outputs.py --outputs-file=$GCS_BUCKET_PATH/workflow_artifacts/$WORKFLOW_ID/outputs.json --outputs-dir=$WORKING_BASE/
+python3 /opt/scripts/pull_outputs.py --outputs-file=$GCS_BUCKET_PATH/workflow_artifacts/$WORKFLOW_ID/outputs.json --outputs-dir=$WORKING_BASE/final_results/
 exit
-
 ```
 
 Examine the outputs briefly:
@@ -357,16 +359,14 @@ pvacseq run $HOME/final_results/annotated.expression.vcf.gz \
 ```
 
 
-### Store the final results in the RCRF S3 bucket 
+### Store the final results on Google Cloud
 Use AWS cli to upload final results files to S3.  Make sure you update the paths below to correspond to the correct patient!
 
 ```bash
 cd $WORKING_BASE
 export PATIENT_ID="JLF-100-044"
-aws s3 ls s3://rcrf-h37-data/JLF/${PATIENT_ID}/
-aws s3 cp $HOME/yamls/${GCS_CASE_NAME}_immuno_cloud-WDL.yaml s3://rcrf-h37-data/JLF/${PATIENT_ID}/gcp_immuno_workflow/${GCS_CASE_NAME}_immuno_cloud-WDL.yaml 
-aws s3 cp --recursive $WORKING_BASE s3://rcrf-h37-data/JLF/${PATIENT_ID}/gcp_immuno_workflow/
-aws s3 ls s3://rcrf-h37-data/JLF/${PATIENT_ID}/gcp_immuno_workflow/
+
+gsutil cp -r final_results gs://jlf-rcrf-immuno-outputs/PATIENT_ID/final_results/
 ```
 
 ### Gather basic QC for Final report
@@ -379,19 +379,18 @@ cd $WORKING_BASE
 
 docker run -it --env HOME --env WORKING_BASE -v $HOME/:$HOME/ -v $HOME/.config/gcloud:/root/.config/gcloud griffithlab/neoang_scripts:latest /bin/bash
 
-cd $HOME
-mkdir manual_review
-cd manual_review
+cd $WORKING_BASE
+mkdir ../manual_review
+cd ../manual_review
 
-python3 /opt/scripts/get_neoantigen_qc.py -WB $HOME -f final_results --yaml $HOME/yamls/${GCS_CASE_NAME}_immuno_cloud-WDL.yaml
+python3 /opt/scripts/get_neoantigen_qc.py -WB $WORKING_BASE -f final_results --yaml $HOME/yamls/${GCS_CASE_NAME}_immuno_cloud-WDL.yaml
 python3 /opt/scripts/get_FDA_thresholds.py -WB  $WORKING_BASE -f final_results
 
 exit
 
 
-# Add the manual review files to the AWS bucket
-aws s3 cp --recursive $HOME/manual_review/ s3://rcrf-h37-data/JLF/${PATIENT_ID}/gcp_immuno_workflow/manual_review/
-aws s3 ls s3://rcrf-h37-data/JLF/${PATIENT_ID}/gcp_immuno_workflow/manual_review/
+# Add the manual review files to the Google bucket
+gsutil cp -r manual_review gs://jlf-rcrf-immuno-outputs/{GCS_CASE_NAME}/final_results/
 ```
 
 If the VM has already been deleted, you can download just what you need for these scripts to run. 
