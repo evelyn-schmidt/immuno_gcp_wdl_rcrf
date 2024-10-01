@@ -366,7 +366,7 @@ Use AWS cli to upload final results files to S3.  Make sure you update the paths
 cd $WORKING_BASE
 export PATIENT_ID="JLF-100-044"
 
-gsutil cp -r final_results gs://jlf-rcrf-immuno-outputs/PATIENT_ID/final_results/
+gsutil cp -r final_results/ gs://jlf-rcrf-immuno-outputs/PATIENT_ID/
 ```
 
 ### Gather basic QC for Final report
