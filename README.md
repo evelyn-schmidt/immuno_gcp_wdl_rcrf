@@ -385,9 +385,8 @@ cd ../manual_review
 
 python3 /opt/scripts/get_neoantigen_qc.py -WB $WORKING_BASE -f final_results --yaml $HOME/yamls/${GCS_CASE_NAME}_immuno_cloud-WDL.yaml
 python3 /opt/scripts/get_FDA_thresholds.py -WB  $WORKING_BASE -f final_results
-
+python3 /opt/scripts/hla_comparison.py -WB $WORKING_BASE
 exit
-
 
 # Add the manual review files to the Google bucket
 gsutil cp -r manual_review gs://jlf-rcrf-immuno-outputs/{GCS_CASE_NAME}/final_results/
