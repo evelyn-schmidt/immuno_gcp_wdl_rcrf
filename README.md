@@ -528,3 +528,11 @@ gcloud compute instances delete $GCS_INSTANCE_NAME
 You can empty the cloud bucket either in the Web Console or using commands like `gsutil rm -r $GCS_BUCKET_PATH/folder-name`.
 
 Finally, you should perform a survey of Cloud Storage and Compute Engine sections in the Google Cloud Web Console to make sure everything has been cleaned up successfully.
+
+
+### Fusion Review
+
+Reference Doc:https://docs.google.com/document/d/1zzx3qE8DNFp-jJhWm17nTJExiYWBcO423EiuRva41ZI/edit?tab=t.0
+
+https://github.com/kcotto/fusion_review/blob/main/README.md
+
