@@ -392,7 +392,7 @@ python3 /opt/scripts/hla_comparison.py -WB $WORKING_BASE
 exit
 
 # Add the manual review files to the Google bucket
-gsutil cp -r manual_review gs://jlf-rcrf-immuno-outputs/{GCS_CASE_NAME}/final_results/
+gsutil cp -r manual_review/ $GCS_BUCKET_PATH/$PATIENT_ID/
 ```
 
 If the VM has already been deleted, you can download just what you need for these scripts to run. 
