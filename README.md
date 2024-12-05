@@ -174,6 +174,7 @@ export GCS_SERVICE_ACCOUNT=cromwell-server@$GCS_PROJECT.iam.gserviceaccount.com
 export GCS_BUCKET_NAME=jlf-rcrf-immuno-outputs
 export GCS_BUCKET_PATH=gs://$GCS_BUCKET_NAME
 export GCS_CASE_NAME=jlf-100-044
+export PATIENT_ID="JLF-100-044"
 export WORKING_BASE=$HOME/gcp_immuno/
 
 source /shared/helpers.sh
@@ -364,9 +365,11 @@ Use AWS cli to upload final results files to S3.  Make sure you update the paths
 
 ```bash
 cd $WORKING_BASE
-export PATIENT_ID="JLF-100-044"
 
-gsutil cp -r final_results/ gs://jlf-rcrf-immuno-outputs/PATIENT_ID/
+# check to make sure you are copying to the correct bucket
+gsutil ls $GCS_BUCKET_PATH/$PATIENT_ID/
+
+gsutil cp -r final_results/ $GCS_BUCKET_PATH/$PATIENT_ID/
 ```
 
 ### Gather basic QC for Final report
