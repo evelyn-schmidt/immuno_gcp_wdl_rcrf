@@ -370,7 +370,53 @@ cd $WORKING_BASE
 gsutil ls $GCS_BUCKET_PATH/$PATIENT_ID/
 
 gsutil cp -r final_results/ $GCS_BUCKET_PATH/$PATIENT_ID/
+
+exit
 ```
+
+### Get Timing Data
+Now locally, NOT on the VM. 
+
+```
+cd $WORKING_BASE
+mkdir costs
+cd costs
+
+mkdir metadata
+cd metadata
+
+export WORKFLOW_ID=<id from above>
+gsutil cp -r $GCS_BUCKET_PATH/workflow_artifacts/$WORKFLOW_ID/metadata .
+
+docker run -it --env HOME --env WORKING_BASE --env WORKFLOW_ID -v $HOME/:$HOME/ -v $HOME/.config/gcloud:/root/.config/gcloud mgibio/cloudize-workflow:latest /bin/bash
+cd $WORKING_BASE/costs
+
+python3 $WORKING_BASE/git/cloud-workflows/scripts/estimate_billing.py $WORKFLOW_ID metadata/ > costs.json
+python3 $WORKING_BASE/git/cloud-workflows/scripts/estimate_billing.py $WORKFLOW_ID $GCS_BUCKET_PATH/workflow_artifacts/$WORKFLOW_ID/artifacts/metadata/ > costs.json
+python3 $WORKING_BASE/git/cloud-workflows/scripts/costs_json_to_csv.py costs.json > costs.csv
+cat costs.csv | sed 's/,/\t/g' > costs.tsv
+
+exit
+
+cd $WORKING_BASE/costs
+
+cut -f 1 costs.tsv | perl -pe 's/_shard-\d+//g' | sort | uniq | while read i;do echo "$i     $(grep $i costs.tsv | cut -f 13 | awk '{ SUM += $1} END { print SUM}')";done | sed 's/ \+ /\t/g' > costs_total_condensed.tsv
+cut -f 1 costs.tsv | perl -pe 's/_shard-\d+//g' | sort | uniq | while read i;do echo "$i     $(grep $i costs.tsv | cut -f 9 | awk '{ SUM += $1} END { print SUM}')";done | sed 's/ \+ /\t/g' > costs_memory_condensed.tsv
+cut -f 1 costs.tsv | perl -pe 's/_shard-\d+//g' | sort | uniq | while read i;do echo "$i     $(grep $i costs.tsv | cut -f 10 | awk '{ SUM += $1} END { print SUM}')";done | sed 's/ \+ /\t/g' > costs_cpu_condensed.tsv
+cut -f 1 costs.tsv | perl -pe 's/_shard-\d+//g' | sort | uniq | while read i;do echo "$i     $(grep $i costs.tsv | cut -f 11 | awk '{ SUM += $1} END { print SUM}')";done | sed 's/ \+ /\t/g' > costs_disk_condensed.tsv
+
+paste costs_total_condensed.tsv costs_cpu_condensed.tsv costs_memory_condensed.tsv costs_disk_condensed.tsv | cut -f 1,2,4,6,8 > costs_report.tsv
+echo -e "task\ttotal\tcpu\tmemory\tdisk" > header.tsv
+sort -n -k 2 -r costs_report.tsv | cat header.tsv - > costs_report_final.tsv
+rm -f costs_report.tsv header.tsv costs.csv
+
+#Summarize overall costs -- ADD THIS TO THE GENOMICS REPORT
+tail costs.json | head -n 9 | tr -d \" | tr -d "," | grep -v durationSeconds | grep -v Time
+
+#List top 20 tasks by cost
+head -n 21 costs_report_final.tsv | column -t
+```
+
 
 ### Gather basic QC for Final report
 On google VM:
