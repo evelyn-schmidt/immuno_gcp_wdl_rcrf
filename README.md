@@ -171,7 +171,7 @@ gcloud compute ssh $GCS_INSTANCE_NAME
 
 export GCS_PROJECT=jlf-rcrf
 export GCS_SERVICE_ACCOUNT=cromwell-server@$GCS_PROJECT.iam.gserviceaccount.com
-export GCS_BUCKET_NAME=jlf-rcrf-immuno-outputs
+export GCS_BUCKET_NAME=evelyn-immuno-outputs
 export GCS_BUCKET_PATH=gs://$GCS_BUCKET_NAME
 export GCS_CASE_NAME=jlf-100-044
 export PATIENT_ID="JLF-100-044"
@@ -367,9 +367,9 @@ Use AWS cli to upload final results files to S3.  Make sure you update the paths
 cd $WORKING_BASE
 
 # check to make sure you are copying to the correct bucket
-gsutil ls $GCS_BUCKET_PATH/$PATIENT_ID/
+gsutil ls gs://jlf-rcrf-immuno-outputs/$PATIENT_ID/
 
-gsutil cp -r final_results/ $GCS_BUCKET_PATH/$PATIENT_ID/
+gsutil cp -r final_results/ gs://jlf-rcrf-immuno-outputs/$PATIENT_ID/
 
 exit
 ```
